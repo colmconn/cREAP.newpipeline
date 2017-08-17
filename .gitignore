@@ -1,0 +1,33 @@
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# R related files
+######################
+.Rhistory
+.Rapp.history
+.RData
+.3dLME.dbg.AFNI.args
+.rPkgsInstall.dbg.AFNI.args
+.Rproj.user
+
+## automatically generated scripts
+run/
+rm.*
+3dlme*
+
+## other stuff
+*.csv*
+.#*
+*.orig*
+.xls*
+
+## backup files
+*~
+
