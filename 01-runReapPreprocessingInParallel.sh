@@ -155,17 +155,23 @@ function doZeropad {
     info_message_ln "Zeropadding anat and EPI for subject $subject"
     if [[ -f $DATA/$subject/${subject}_clp+orig.HEAD ]] ; then
 	if [[ ! -f $DATA/$subject/${subject}.zp+orig.HEAD ]]  || \
-	   [[ $DATA/$subject/${subject}_clp+orig.HEAD -nt $DATA/$subject/${subject}.zp+orig.HEAD ]] ; then
-	    ( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}.zp ${subject}_clp+orig.HEAD )
+	       [[ $DATA/$subject/${subject}_clp+orig.HEAD -nt $DATA/$subject/${subject}.zp+orig.HEAD ]] ; then
+	    if [[ ! -f $DATA/$subject/${subject}.zp+orig.HEAD ]] ; then 
+		( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}.zp ${subject}_clp+orig.HEAD )
+	    fi
 	fi
     else
 	if [[ ! -f $DATA/$subject/${subject}.zp+orig.HEAD ]] || \
-	   [[ $DATA/$subject/${subject}+orig.HEAD -nt $DATA/$subject/${subject}.zp+orig.HEAD ]]; then 
-	    ( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}.zp ${subject}+orig.HEAD )
+	       [[ $DATA/$subject/${subject}+orig.HEAD -nt $DATA/$subject/${subject}.zp+orig.HEAD ]]; then
+	    if [[ ! -f $DATA/$subject/${subject}.zp+orig.HEAD ]] ; then 
+		( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}.zp ${subject}+orig.HEAD )
+	    fi
 	fi
     fi
     if [[ ! -f $DATA/$subject/${subject}.resting.zp+orig.HEAD ]] ; then
-	( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}reap.zp ${DATA}/$subject/${subject}reap+orig.HEAD )
+	if [[ ! -f $DATA/$subject/${subject}reap.zp+orig.HEAD ]] ; then 
+	    ( cd $DATA/$subject ; 3dZeropad ${zeropadArgs} -prefix ${subject}reap.zp ${DATA}/$subject/${subject}reap+orig.HEAD )
+	fi
     fi
 }
 
@@ -176,7 +182,7 @@ if [[ "$#" -gt 0 ]] ; then
 else
     ## subjects=$( cd $DATA ; find ./ -maxdepth 1 \( -name '[0-9][0-9][0-9]_[ACD]' -o -name '[0-9][0-9][0-9]_[ACD]?' \) -printf "%f " )
     ## subjects=$( cd $DATA ; find ./ -maxdepth 1 \( -name '[0-9][0-9][0-9]_[A]' -o -name '[0-9][0-9][0-9]_[A]?' \) -printf "%f " )
-    subjects=$( cd $DATA  ; ls -d [0-9][0-9][0-9]_{A,B,C,C,D,E} [0-9][0-9][0-9]_{A,B,C,C,D,E}2 2> /dev/null | grep -v 999 )
+    subjects=$( cd $DATA  ; ls -d [0-9][0-9][0-9]_{A,B,C,C,D,E} [0-9][0-9][0-9]_{A,B,C,C,D,E}2 2> /dev/null | grep -v 999 | sort -u )
 fi
 
 ## echo ${subjects}
@@ -240,13 +246,11 @@ for subject in $subjects ; do
 	info_message_ln "No per subject alignment options found. Proceeding without them. Check alignments carefully."
     fi
 
-    if [[ -z ${extraAlignmentArgs} ]] ; then
-	extraAlignmentArgs="-align_opts_aea -giant_move -skullstrip_opts -push_to_edge -no_avoid_eyes"
+    if [[  "x${extraAlignmentArgs}" == "x" ]] ; then
+	extraAlignmentArgs="-align_epi_ext_dset ${epiFile}'[0]' -align_opts_aea -giant_move -skullstrip_opts -push_to_edge -no_avoid_eyes"
     else
-	extraAlignmentArgs="${extraAlignmentArgs} -skullstrip_opts -push_to_edge -no_avoid_eyes"	
+	extraAlignmentArgs="${extraAlignmentArgs} -align_epi_ext_dset ${epiFile}'[0]' -align_opts_aea -skullstrip_opts -push_to_edge -no_avoid_eyes"	
     fi
-    
-    extraAlignmentArgs="${extraAlignmentArgs} -align_epi_ext_dset ${epiFile}'[0]'"
 
     ## do non-linear warping? If so add the flag to the extra
     ## alignment args variable
@@ -267,7 +271,6 @@ for subject in $subjects ; do
                                    ${MACHLEARN_DATA}/${subject}/afniEmmPreprocessed.NL/anat.un.aff.qw_WARP.nii.gz"
 	fi
     fi
-
 
     cd ${DATA}/${subject}
     regressorFile=$DATA/regressors/${subject}_reap.wav.1D
@@ -439,10 +442,10 @@ EOF
     chmod +x $outputScriptName
     if [[ $enqueue -eq 1 ]] ; then
 	info_message_ln "Submitting job for execution to queuing system"
-	LOG_FILE=$DATA/$subject/$subject-emm-afniPreproc.${scriptExt}.log
+	LOG_FILE=$DATA/$subject/$subject-reap-afniPreproc.${scriptExt}.log
 	info_message_ln "To see progress run: tail -f $LOG_FILE"
 	rm -f ${LOG_FILE}
-	qsub -N emm-$subject -q all.q -j y -m n -V -wd $( pwd )  -o ${LOG_FILE} $outputScriptName
+	qsub -N reap-$subject -q all.q -j y -m n -V -wd $( pwd )  -o ${LOG_FILE} $outputScriptName
     else
 	info_message_ln "Job *NOT* submitted for execution to queuing system"
 	info_message_ln "Pass -q or --enqueue options to this script to do so"	
